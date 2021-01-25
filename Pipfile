@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+click = "~=7.1"
+"discord.py" = "~=1.6"
+sqlalchemy = "==1.4.0b1"
+alembic = "~=1.5"
+lootbot = {editable = true, path = "."}
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
+
+[pipenv]
+allow_prereleases = true
