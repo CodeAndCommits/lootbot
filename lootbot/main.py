@@ -6,6 +6,7 @@ from .bot import LootBot
 
 logger = logging.getLogger(__name__)
 
+
 def configure_logging(verbose):
     logging.basicConfig(level={
         0: logging.ERROR,
@@ -13,6 +14,7 @@ def configure_logging(verbose):
         2: logging.INFO,
         3: logging.DEBUG,
     }[min(verbose, 3)])
+
 
 @click.command()
 @click.option('-v', '--verbose', count=True)
