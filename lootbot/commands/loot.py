@@ -11,7 +11,11 @@ from lootbot.database import Loot, get_session
 logger = logging.getLogger(__name__)
 
 
-class LootCommands(commands.Cog):
+class LootCommands(commands.Cog, name='Loot'):
+    """
+    All loot related commands
+    """
+
     def __init__(self, bot):
         self.bot = bot
 
