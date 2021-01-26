@@ -16,11 +16,23 @@ def configure_logging(verbose):
     }[min(verbose, 3)])
 
 
+def run_migrations():
+    from alembic import command
+    from alembic.config import Config
+
+    config = Config(f'{os.getcwd()}/alembic.ini')
+    command.upgrade(config, "head")
+
+
 @click.command()
 @click.option('-v', '--verbose', count=True)
-def run(verbose):
+@click.option('-n', '--migrate', is_flag=True)
+def run(verbose: int, migrate: bool):
 
     configure_logging(verbose)
+
+    if migrate:
+        run_migrations()
 
     token = os.getenv('token')
     LootBot.run(token)
