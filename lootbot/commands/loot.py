@@ -3,10 +3,9 @@ import typing
 from discord import Embed, Member
 from discord.ext import commands
 from discord.ext.commands import MemberConverter
-from sqlalchemy import select, delete, update
 import logging
 
-from lootbot.database import Loot, get_session
+from lootbot.database import Loot
 
 logger = logging.getLogger(__name__)
 
@@ -25,21 +24,18 @@ class LootCommands(commands.Cog, name='Loot'):
         help='''Add an item to the loot pile. May be assigned to a member by mentioning them.'''
     )
     async def add_loot(self, ctx: commands.Context, item: str, member: typing.Optional[Member]):
-        with get_session() as session:
+        from ..database import add_item
 
-            if member is not None:
-                logger.info(f'Adding Item {item} to {member} in {ctx.guild.name}')
-                item = Loot(guild_id=ctx.guild.id, item=item, belongs_to=member.id)
+        if member is not None:
+            logger.info(f'Adding Item {item} to {member} in {ctx.guild.name}')
+            item = Loot(guild_id=ctx.guild.id, item=item, belongs_to=member.id)
 
-            else:
-                item = input
-                logger.info(f'Adding Item {item} in {ctx.guild.name}')
-                item = Loot(guild_id=ctx.guild.id, item=item)
+        else:
+            logger.info(f'Adding Item {item} in {ctx.guild.name}')
+            item = Loot(guild_id=ctx.guild.id, item=item)
 
-            session.add(item)
-
-            await ctx.reply(f'Added {item.item} to Loot')
-            session.commit()
+        add_item(item)
+        await ctx.reply(f'Added {item.item} to Loot')
 
     @commands.command(
         name='loot',
@@ -49,16 +45,16 @@ class LootCommands(commands.Cog, name='Loot'):
     async def get_loot(self, ctx: commands.Context):
         logger.info(f'Getting Items for {ctx.guild.name}')
 
-        with get_session() as session:
-            result = session.execute(select(Loot).where(Loot.guild_id == ctx.guild.id))
-            items = []
+        from ..database import get_items
 
-            for result in result.all():
-                if result.Loot.belongs_to is not None:
-                    member = await MemberConverter().convert(ctx, result.Loot.belongs_to)
-                    items.append(f'{result.Loot.item} ({member.nick or member.name})')
-                else:
-                    items.append(f'{result.Loot.item}')
+        items = []
+
+        for result in get_items(str(ctx.guild.id)).all():
+            if result.Loot.belongs_to is not None:
+                member = await MemberConverter().convert(ctx, result.Loot.belongs_to)
+                items.append(f'{result.Loot.item} ({member.nick or member.name})')
+            else:
+                items.append(f'{result.Loot.item}')
 
         embed = Embed()
         embed.title = 'Loot'
@@ -74,17 +70,13 @@ class LootCommands(commands.Cog, name='Loot'):
     async def get_my_loot(self, ctx: commands.Context):
         logger.info(f'Getting Items for {ctx.author} in {ctx.guild.name}')
 
-        with get_session() as session:
-            result = session.execute(
-                select(Loot)
-                    .where(Loot.guild_id == ctx.guild.id)
-                    .where(Loot.belongs_to == ctx.author.id)
-            )
-            items = []
+        from ..database import get_member_items
 
-            for result in result.all():
-                member = await MemberConverter().convert(ctx, result.Loot.belongs_to)
-                items.append(f'{result.Loot.item} ({member.nick or member.name})')
+        items = []
+
+        for result in get_member_items(str(ctx.guild.id), str(ctx.author.id)).all():
+            member = await MemberConverter().convert(ctx, result.Loot.belongs_to)
+            items.append(f'{result.Loot.item} ({member.nick or member.name})')
 
         embed = Embed()
         embed.title = 'Loot'
@@ -100,15 +92,9 @@ class LootCommands(commands.Cog, name='Loot'):
     async def remove_loot(self, ctx: commands.Context, item: str):
         logger.info(f'Removing Item {item} from {ctx.guild.name}')
 
-        with get_session() as session:
-            session.execute(
-                delete(Loot)
-                    .where(Loot.guild_id == ctx.guild.id)
-                    .where(Loot.item == item)
-                    .execution_options(synchronize_session="fetch")
-            )
+        from ..database import remove_item
 
-            session.commit()
+        remove_item(str(ctx.guild.id), item)
 
         await ctx.reply(f"Removed {item} from Loot")
 
@@ -120,17 +106,9 @@ class LootCommands(commands.Cog, name='Loot'):
     async def rename_loot(self, ctx: commands.Context, item_a: str, item_b: str):
         logger.info(f'Renaming {item_a} to {item_b} for {ctx.guild.name}')
 
-        with get_session() as session:
-            session.execute(
-                update(Loot)
-                    .where(Loot.guild_id == ctx.guild.id)
-                    .where(Loot.item == item_a)
-                    .values(item=item_b)
-                    .execution_options(synchronize_session="fetch")
+        from ..database import remove_item
 
-            )
-
-            session.commit()
+        remove_item(str(ctx.guild.id), item_a, item_b)
 
         await ctx.reply(f"Renamed {item_a} to {item_b}")
 
@@ -142,16 +120,8 @@ class LootCommands(commands.Cog, name='Loot'):
     async def give_loot(self, ctx: commands.Context, item: str, member: Member):
         logger.info(f'Moving {item} to {member} for {ctx.guild.name}')
 
-        with get_session() as session:
-            session.execute(
-                update(Loot)
-                    .where(Loot.guild_id == ctx.guild.id)
-                    .where(Loot.item == item)
-                    .values(belongs_to=member.id)
-                    .execution_options(synchronize_session="fetch")
+        from ..database import assign_item
 
-            )
-
-            session.commit()
+        assign_item(str(ctx.guild.id), item, str(member.id))
 
         await ctx.reply(f"Gave {item} to {member.nick or member.name}")

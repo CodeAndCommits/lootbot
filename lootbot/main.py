@@ -19,16 +19,19 @@ def configure_logging(verbose):
 def run_migrations():
     from alembic import command
     from alembic.config import Config
+    from .database import engine
 
     config = Config(f'{os.getcwd()}/alembic.ini')
-    command.upgrade(config, "head")
+
+    with engine.begin() as connection:
+        config.attributes['connection'] = connection
+        command.upgrade(config, "head")
 
 
 @click.command()
 @click.option('-v', '--verbose', count=True)
 @click.option('-n', '--migrate', is_flag=True)
 def run(verbose: int, migrate: bool):
-
     configure_logging(verbose)
 
     if migrate:

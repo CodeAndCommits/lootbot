@@ -9,6 +9,7 @@ click = "~=7.1"
 sqlalchemy = "==1.4.0b1"
 alembic = "~=1.5"
 lootbot = {editable = true, path = "."}
+psycopg2 = "*"
 
 [dev-packages]
 

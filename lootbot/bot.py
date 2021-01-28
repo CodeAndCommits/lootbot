@@ -15,5 +15,5 @@ async def on_ready():
     logger.info(f'Logged in as {LootBot.user.name} - {LootBot.user.id}')
 
     LootBot.add_cog(LootCommands(LootBot))
-    activity = Activity(name="Master Looter", type=ActivityType.custom, details="Master Looter")
+    activity = Activity(name="Master Looter", type=ActivityType.playing, details="GM's Aide")
     await LootBot.change_presence(activity=activity)
